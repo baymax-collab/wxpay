@@ -18,49 +18,9 @@ const getOpenId = async (code) => {
     if (data.errcode) return false
     return data
 }
-//预支付
-const prePayTest = async (openid) => {
-    return axios({
-        url: `https://api.mch.weixin.qq.com/v3/pay/transactions/jsapi`,
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-            // 'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        data: {
-            "mchid": mchid,
-            "out_trade_no": "1217752501201407033233368318",
-            "appid": appid,
-            "description": "WX Pay",//TODO:这个需要改
-            "notify_url": "",//TODO:这个需要改
-            "amount": {
-                "total": 1,
-                "currency": "CNY"
-            },
-            "payer": {
-                "openid": openid
-            }
-        },
-    }).then(data => {
-        return data
-    }).catch(e => {
-        console.log(e)
-    })
-
-}
 
 
-// jsapi下单
-/*
-data:{
-	out_trade_no:'商户订单号',
-	description:'说明'
-	attach:'携带回调参数'
-	notify_url:'通知地址',
-	total:'分',
-	openid:'用户openid',
-}
-*/
+
 
 /**
  * 获取随机的订单号
@@ -70,7 +30,7 @@ function createtrade_no() {
     return time
 };
 async function prePay(data) {
-    let notify_url = 'https://v2.gvrcraft.com:444/api/gvrchat/wechat/notify'
+    let notify_url = 'https://xxx.xxx.com/api/gvrchat/wechat/v3/notify'
     let attach = 'test'
     let url = '/v3/pay/transactions/jsapi';
 
@@ -141,8 +101,32 @@ function sgin(method, url, params = "") {
     return auth;
 }
 
+function decodeByAES(cipherText,key,iv,add){
+    let rst = '';
+    cipherText = Buffer.from(cipherText, 'base64');
+    let authTag = cipherText.slice(cipherText.length - 16);
+    let data = cipherText.slice(0, cipherText.length - 16);
+    let decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+    decipher.setAAD(Buffer.from(add));
+    rst = decipher.update(data, 'binary', 'utf8');
+    try {
+        rst += decipher.final('utf-8');
+    } catch (e) {
+        console.log('error:::',e.toString());
+    }
+    return rst;
+}
 
-
+exports.notify  = (body)=>{
+    const key = config.key;
+    const ciphertext = body.resource.ciphertext;
+    const nonce = body.resource.nonce;
+    const associated_data = body.resource.associated_data;
+//解密
+    let data = JSON.parse(decodeByAES(ciphertext,key,nonce,associated_data));
+    console.log("解密",data)
+}
 exports.wxpay = async (code) => {
     //on2NOw_LHl1DLV0wN_TEp0DM960o
     let openidData = await getOpenId(code)
